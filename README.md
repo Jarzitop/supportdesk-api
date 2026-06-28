@@ -2,7 +2,7 @@
 
 Backend REST API for managing technical support tickets, users, agents, comments, basic SLA rules, and ticket change history.
 
-This project is part of my backend development portfolio as a Systems and Computing Engineering student. The goal is to build a clean, professional, and interview-defendable API using Java and Spring Boot.
+This project is part of my backend development portfolio as a Systems and Computing Engineering student. The goal is to build a clean, professional API using Java and Spring Boot.
 
 ## Project Scope
 
