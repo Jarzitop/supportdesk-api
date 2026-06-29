@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
@@ -46,6 +48,9 @@ class TicketServiceTest {
 
     @Mock
     private SlaCalculator slaCalculator;
+
+    @Mock
+    private TicketHistoryService ticketHistoryService;
 
     @InjectMocks
     private TicketService ticketService;
@@ -110,12 +115,15 @@ class TicketServiceTest {
     @Test
     void assignsTicketToSupportAgent() {
         AppUser requester = new AppUser("Alex Rivera", "alex@example.com", Role.REQUESTER);
-        AppUser supportAgent = new AppUser("Sam Lee", "sam@example.com", Role.SUPPORT_AGENT);
+        AppUser supportAgent = mock(AppUser.class);
         Ticket ticket = new Ticket("Cannot sign in", "Valid credentials are rejected", Priority.HIGH, requester);
         AssignTicketRequest request = new AssignTicketRequest(2L);
 
         when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
         when(appUserRepository.findById(2L)).thenReturn(Optional.of(supportAgent));
+        when(supportAgent.getId()).thenReturn(2L);
+        when(supportAgent.getFullName()).thenReturn("Sam Lee");
+        when(supportAgent.getRole()).thenReturn(Role.SUPPORT_AGENT);
         when(ticketRepository.save(ticket)).thenReturn(ticket);
 
         TicketResponse response = ticketService.assignTicket(10L, request);
@@ -123,6 +131,7 @@ class TicketServiceTest {
         assertEquals("Sam Lee", response.assignedAgentName());
         assertEquals(TicketStatus.OPEN, response.status());
         verify(ticketRepository).save(ticket);
+        verify(ticketHistoryService).recordChange(ticket, null, "assignedAgent", null, "2");
     }
 
     @Test
@@ -154,6 +163,24 @@ class TicketServiceTest {
     }
 
     @Test
+    void doesNotRecordHistoryWhenAssignedAgentDoesNotChange() {
+        Ticket ticket = openTicket();
+        AppUser supportAgent = mock(AppUser.class);
+        ticket.setAssignedAgent(supportAgent);
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+        when(appUserRepository.findById(2L)).thenReturn(Optional.of(supportAgent));
+        when(supportAgent.getId()).thenReturn(2L);
+        when(supportAgent.getFullName()).thenReturn("Sam Lee");
+        when(supportAgent.getRole()).thenReturn(Role.SUPPORT_AGENT);
+
+        TicketResponse response = ticketService.assignTicket(10L, new AssignTicketRequest(2L));
+
+        assertEquals(2L, response.assignedAgentId());
+        verify(ticketRepository, never()).save(any(Ticket.class));
+        verifyNoInteractions(ticketHistoryService);
+    }
+
+    @Test
     void changesOpenTicketToInProgress() {
         Ticket ticket = openTicket();
         when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
@@ -167,6 +194,7 @@ class TicketServiceTest {
         assertNull(response.resolvedAt());
         assertNull(response.closedAt());
         verify(ticketRepository).save(ticket);
+        verify(ticketHistoryService).recordChange(ticket, null, "status", "OPEN", "IN_PROGRESS");
     }
 
     @Test
