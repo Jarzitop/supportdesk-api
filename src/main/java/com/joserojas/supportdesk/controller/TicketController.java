@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.joserojas.supportdesk.dto.request.AssignTicketRequest;
 import com.joserojas.supportdesk.dto.request.CreateTicketRequest;
+import com.joserojas.supportdesk.dto.request.UpdateTicketStatusRequest;
 import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.enums.Priority;
 import com.joserojas.supportdesk.enums.TicketStatus;
@@ -55,5 +56,12 @@ public class TicketController {
             @PathVariable Long id,
             @Valid @RequestBody AssignTicketRequest request) {
         return ResponseEntity.ok(ticketService.assignTicket(id, request));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<TicketResponse> updateTicketStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateTicketStatusRequest request) {
+        return ResponseEntity.ok(ticketService.updateTicketStatus(id, request));
     }
 }

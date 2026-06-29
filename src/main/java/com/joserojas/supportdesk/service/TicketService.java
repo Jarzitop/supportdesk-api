@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.joserojas.supportdesk.dto.request.AssignTicketRequest;
 import com.joserojas.supportdesk.dto.request.CreateTicketRequest;
+import com.joserojas.supportdesk.dto.request.UpdateTicketStatusRequest;
 import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.entity.AppUser;
 import com.joserojas.supportdesk.entity.Ticket;
@@ -93,6 +94,40 @@ public class TicketService {
         ticket.setAssignedAgent(assignedAgent);
 
         return toResponse(ticketRepository.save(ticket));
+    }
+
+    @Transactional
+    public TicketResponse updateTicketStatus(Long ticketId, UpdateTicketStatusRequest request) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Ticket with id " + ticketId + " was not found"));
+
+        TicketStatus currentStatus = ticket.getStatus();
+        TicketStatus newStatus = request.status();
+
+        if (!isValidStatusTransition(currentStatus, newStatus)) {
+            throw new InvalidTicketOperationException(
+                    "Cannot change ticket status from " + currentStatus + " to " + newStatus);
+        }
+
+        ticket.setStatus(newStatus);
+
+        if (newStatus == TicketStatus.RESOLVED) {
+            ticket.setResolvedAt(LocalDateTime.now());
+        } else if (newStatus == TicketStatus.CLOSED) {
+            ticket.setClosedAt(LocalDateTime.now());
+        }
+
+        return toResponse(ticketRepository.save(ticket));
+    }
+
+    private boolean isValidStatusTransition(TicketStatus currentStatus, TicketStatus newStatus) {
+        return switch (currentStatus) {
+            case OPEN -> newStatus == TicketStatus.IN_PROGRESS || newStatus == TicketStatus.RESOLVED;
+            case IN_PROGRESS -> newStatus == TicketStatus.RESOLVED;
+            case RESOLVED -> newStatus == TicketStatus.CLOSED;
+            case CLOSED -> false;
+        };
     }
 
     private TicketResponse toResponse(Ticket ticket) {
