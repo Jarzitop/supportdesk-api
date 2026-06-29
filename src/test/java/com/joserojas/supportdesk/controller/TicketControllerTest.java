@@ -1,9 +1,11 @@
 package com.joserojas.supportdesk.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,10 +20,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.joserojas.supportdesk.dto.request.AssignTicketRequest;
 import com.joserojas.supportdesk.dto.request.CreateTicketRequest;
 import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.enums.Priority;
 import com.joserojas.supportdesk.enums.TicketStatus;
+import com.joserojas.supportdesk.exception.InvalidTicketOperationException;
 import com.joserojas.supportdesk.service.TicketService;
 
 @WebMvcTest(TicketController.class)
@@ -112,6 +116,61 @@ class TicketControllerTest {
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
+    @Test
+    void assignTicketReturnsUpdatedTicket() throws Exception {
+        TicketResponse assignedTicket = assignedTicketResponse();
+        when(ticketService.assignTicket(eq(10L), any(AssignTicketRequest.class)))
+                .thenReturn(assignedTicket);
+
+        mockMvc.perform(patch("/api/v1/tickets/10/assign")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "assignedAgentId": 2
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.assignedAgentId").value(2))
+                .andExpect(jsonPath("$.assignedAgentName").value("Sam Lee"))
+                .andExpect(jsonPath("$.status").value("OPEN"));
+
+        verify(ticketService).assignTicket(eq(10L), any(AssignTicketRequest.class));
+    }
+
+    @Test
+    void assignTicketReturnsBadRequestForInvalidAgentId() throws Exception {
+        mockMvc.perform(patch("/api/v1/tickets/10/assign")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "assignedAgentId": 0
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("assignedAgentId: Assigned agent id must be positive"));
+    }
+
+    @Test
+    void assignTicketReturnsBadRequestWhenUserIsNotSupportAgent() throws Exception {
+        when(ticketService.assignTicket(eq(10L), any(AssignTicketRequest.class)))
+                .thenThrow(new InvalidTicketOperationException("User with id 1 is not a support agent"));
+
+        mockMvc.perform(patch("/api/v1/tickets/10/assign")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "assignedAgentId": 1
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("User with id 1 is not a support agent"));
+    }
+
     private TicketResponse ticketResponse() {
         return new TicketResponse(
                 10L,
@@ -128,5 +187,24 @@ class TicketControllerTest {
                 LocalDateTime.of(2026, 6, 29, 12, 0),
                 null,
                 null);
+    }
+
+    private TicketResponse assignedTicketResponse() {
+        TicketResponse ticket = ticketResponse();
+        return new TicketResponse(
+                ticket.id(),
+                ticket.title(),
+                ticket.description(),
+                ticket.status(),
+                ticket.priority(),
+                ticket.requesterId(),
+                ticket.requesterName(),
+                2L,
+                "Sam Lee",
+                ticket.createdAt(),
+                ticket.updatedAt(),
+                ticket.dueAt(),
+                ticket.resolvedAt(),
+                ticket.closedAt());
     }
 }

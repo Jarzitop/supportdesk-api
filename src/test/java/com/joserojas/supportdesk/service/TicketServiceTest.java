@@ -19,6 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.joserojas.supportdesk.dto.request.AssignTicketRequest;
 import com.joserojas.supportdesk.dto.request.CreateTicketRequest;
 import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.entity.AppUser;
@@ -26,6 +27,7 @@ import com.joserojas.supportdesk.entity.Ticket;
 import com.joserojas.supportdesk.enums.Priority;
 import com.joserojas.supportdesk.enums.Role;
 import com.joserojas.supportdesk.enums.TicketStatus;
+import com.joserojas.supportdesk.exception.InvalidTicketOperationException;
 import com.joserojas.supportdesk.exception.ResourceNotFoundException;
 import com.joserojas.supportdesk.repository.AppUserRepository;
 import com.joserojas.supportdesk.repository.TicketRepository;
@@ -101,5 +103,51 @@ class TicketServiceTest {
         when(ticketRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> ticketService.getTicketById(99L));
+    }
+
+    @Test
+    void assignsTicketToSupportAgent() {
+        AppUser requester = new AppUser("Alex Rivera", "alex@example.com", Role.REQUESTER);
+        AppUser supportAgent = new AppUser("Sam Lee", "sam@example.com", Role.SUPPORT_AGENT);
+        Ticket ticket = new Ticket("Cannot sign in", "Valid credentials are rejected", Priority.HIGH, requester);
+        AssignTicketRequest request = new AssignTicketRequest(2L);
+
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+        when(appUserRepository.findById(2L)).thenReturn(Optional.of(supportAgent));
+        when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+        TicketResponse response = ticketService.assignTicket(10L, request);
+
+        assertEquals("Sam Lee", response.assignedAgentName());
+        assertEquals(TicketStatus.OPEN, response.status());
+        verify(ticketRepository).save(ticket);
+    }
+
+    @Test
+    void rejectsAssignmentWhenUserDoesNotExist() {
+        AppUser requester = new AppUser("Alex Rivera", "alex@example.com", Role.REQUESTER);
+        Ticket ticket = new Ticket("Cannot sign in", "Valid credentials are rejected", Priority.HIGH, requester);
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+        when(appUserRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> ticketService.assignTicket(10L, new AssignTicketRequest(99L)));
+
+        verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    @Test
+    void rejectsAssignmentToRequester() {
+        AppUser requester = new AppUser("Alex Rivera", "alex@example.com", Role.REQUESTER);
+        Ticket ticket = new Ticket("Cannot sign in", "Valid credentials are rejected", Priority.HIGH, requester);
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+        when(appUserRepository.findById(1L)).thenReturn(Optional.of(requester));
+
+        assertThrows(
+                InvalidTicketOperationException.class,
+                () -> ticketService.assignTicket(10L, new AssignTicketRequest(1L)));
+
+        verify(ticketRepository, never()).save(any(Ticket.class));
     }
 }
