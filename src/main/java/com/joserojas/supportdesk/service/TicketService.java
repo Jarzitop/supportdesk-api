@@ -2,6 +2,7 @@ package com.joserojas.supportdesk.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,14 +28,17 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final AppUserRepository appUserRepository;
     private final SlaCalculator slaCalculator;
+    private final TicketHistoryService ticketHistoryService;
 
     public TicketService(
             TicketRepository ticketRepository,
             AppUserRepository appUserRepository,
-            SlaCalculator slaCalculator) {
+            SlaCalculator slaCalculator,
+            TicketHistoryService ticketHistoryService) {
         this.ticketRepository = ticketRepository;
         this.appUserRepository = appUserRepository;
         this.slaCalculator = slaCalculator;
+        this.ticketHistoryService = ticketHistoryService;
     }
 
     @Transactional
@@ -91,9 +95,20 @@ public class TicketService {
                     "User with id " + request.assignedAgentId() + " is not a support agent");
         }
 
+        AppUser previousAssignedAgent = ticket.getAssignedAgent();
+        if (previousAssignedAgent != null
+                && Objects.equals(previousAssignedAgent.getId(), assignedAgent.getId())) {
+            return toResponse(ticket);
+        }
+
+        String oldValue = previousAssignedAgent == null ? null : previousAssignedAgent.getId().toString();
+        String newValue = assignedAgent.getId().toString();
         ticket.setAssignedAgent(assignedAgent);
 
-        return toResponse(ticketRepository.save(ticket));
+        Ticket savedTicket = ticketRepository.save(ticket);
+        ticketHistoryService.recordChange(savedTicket, null, "assignedAgent", oldValue, newValue);
+
+        return toResponse(savedTicket);
     }
 
     @Transactional
@@ -118,7 +133,15 @@ public class TicketService {
             ticket.setClosedAt(LocalDateTime.now());
         }
 
-        return toResponse(ticketRepository.save(ticket));
+        Ticket savedTicket = ticketRepository.save(ticket);
+        ticketHistoryService.recordChange(
+                savedTicket,
+                null,
+                "status",
+                currentStatus.name(),
+                newStatus.name());
+
+        return toResponse(savedTicket);
     }
 
     private boolean isValidStatusTransition(TicketStatus currentStatus, TicketStatus newStatus) {
