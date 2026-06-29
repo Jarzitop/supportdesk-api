@@ -1,6 +1,7 @@
 package com.joserojas.supportdesk.service;
 
 import java.util.List;
+import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +24,13 @@ public class AppUserService {
 
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
-        if (appUserRepository.existsByEmail(request.email())) {
-            throw new DuplicateResourceException("A user with email '" + request.email() + "' already exists");
+        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
+
+        if (appUserRepository.existsByEmail(normalizedEmail)) {
+            throw new DuplicateResourceException("A user with email '" + normalizedEmail + "' already exists");
         }
 
-        AppUser appUser = new AppUser(request.fullName(), request.email(), request.role());
+        AppUser appUser = new AppUser(request.fullName(), normalizedEmail, request.role());
         AppUser savedUser = appUserRepository.save(appUser);
 
         return toResponse(savedUser);

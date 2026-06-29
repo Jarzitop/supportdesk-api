@@ -23,10 +23,10 @@ public class AppUser {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 120)
     private String fullName;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 160)
     private String email;
 
     @Enumerated(EnumType.STRING)
