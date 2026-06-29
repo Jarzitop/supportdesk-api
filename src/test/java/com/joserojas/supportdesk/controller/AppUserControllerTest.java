@@ -21,6 +21,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.joserojas.supportdesk.dto.request.CreateUserRequest;
 import com.joserojas.supportdesk.dto.response.UserResponse;
 import com.joserojas.supportdesk.enums.Role;
+import com.joserojas.supportdesk.exception.DuplicateResourceException;
+import com.joserojas.supportdesk.exception.ResourceNotFoundException;
 import com.joserojas.supportdesk.service.AppUserService;
 
 @WebMvcTest(AppUserController.class)
@@ -87,6 +89,71 @@ class AppUserControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"));
+    }
+
+    @Test
+    void createUserReturnsBadRequestForInvalidEnumValue() throws Exception {
+        mockMvc.perform(post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fullName": "Alex Rivera",
+                                  "email": "alex@example.com",
+                                  "role": "OWNER"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message")
+                        .value("Request body is malformed or contains invalid values"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void getUserReturnsBadRequestForInvalidIdType() throws Exception {
+        mockMvc.perform(get("/api/v1/users/not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message")
+                        .value("Invalid value 'not-a-number' for parameter 'id'"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void createUserReturnsConflictForDuplicateEmail() throws Exception {
+        when(appUserService.createUser(any(CreateUserRequest.class)))
+                .thenThrow(new DuplicateResourceException("A user with email 'alex@example.com' already exists"));
+
+        mockMvc.perform(post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fullName": "Alex Rivera",
+                                  "email": "alex@example.com",
+                                  "role": "REQUESTER"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message")
+                        .value("A user with email 'alex@example.com' already exists"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void getUserReturnsNotFoundForUnknownId() throws Exception {
+        when(appUserService.getUserById(99L))
+                .thenThrow(new ResourceNotFoundException("User with id 99 was not found"));
+
+        mockMvc.perform(get("/api/v1/users/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("User with id 99 was not found"))
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 
     private UserResponse userResponse() {
