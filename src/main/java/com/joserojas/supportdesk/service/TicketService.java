@@ -6,12 +6,15 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.joserojas.supportdesk.dto.request.AssignTicketRequest;
 import com.joserojas.supportdesk.dto.request.CreateTicketRequest;
 import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.entity.AppUser;
 import com.joserojas.supportdesk.entity.Ticket;
 import com.joserojas.supportdesk.enums.Priority;
+import com.joserojas.supportdesk.enums.Role;
 import com.joserojas.supportdesk.enums.TicketStatus;
+import com.joserojas.supportdesk.exception.InvalidTicketOperationException;
 import com.joserojas.supportdesk.exception.ResourceNotFoundException;
 import com.joserojas.supportdesk.repository.AppUserRepository;
 import com.joserojas.supportdesk.repository.TicketRepository;
@@ -70,6 +73,26 @@ public class TicketService {
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket with id " + id + " was not found"));
 
         return toResponse(ticket);
+    }
+
+    @Transactional
+    public TicketResponse assignTicket(Long ticketId, AssignTicketRequest request) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Ticket with id " + ticketId + " was not found"));
+
+        AppUser assignedAgent = appUserRepository.findById(request.assignedAgentId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User with id " + request.assignedAgentId() + " was not found"));
+
+        if (assignedAgent.getRole() != Role.SUPPORT_AGENT) {
+            throw new InvalidTicketOperationException(
+                    "User with id " + request.assignedAgentId() + " is not a support agent");
+        }
+
+        ticket.setAssignedAgent(assignedAgent);
+
+        return toResponse(ticketRepository.save(ticket));
     }
 
     private TicketResponse toResponse(Ticket ticket) {
