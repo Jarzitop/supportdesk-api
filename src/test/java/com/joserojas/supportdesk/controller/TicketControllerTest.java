@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.joserojas.supportdesk.dto.request.AssignTicketRequest;
 import com.joserojas.supportdesk.dto.request.CreateTicketRequest;
+import com.joserojas.supportdesk.dto.request.UpdateTicketStatusRequest;
 import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.enums.Priority;
 import com.joserojas.supportdesk.enums.TicketStatus;
@@ -171,6 +172,41 @@ class TicketControllerTest {
                 .andExpect(jsonPath("$.message").value("User with id 1 is not a support agent"));
     }
 
+    @Test
+    void updateTicketStatusReturnsUpdatedTicket() throws Exception {
+        TicketResponse updatedTicket = ticketWithStatus(TicketStatus.IN_PROGRESS);
+        when(ticketService.updateTicketStatus(eq(10L), any(UpdateTicketStatusRequest.class)))
+                .thenReturn(updatedTicket);
+
+        mockMvc.perform(patch("/api/v1/tickets/10/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "IN_PROGRESS"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+
+        verify(ticketService).updateTicketStatus(eq(10L), any(UpdateTicketStatusRequest.class));
+    }
+
+    @Test
+    void updateTicketStatusReturnsBadRequestForMissingStatus() throws Exception {
+        mockMvc.perform(patch("/api/v1/tickets/10/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": null
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("status: Status is required"));
+    }
+
     private TicketResponse ticketResponse() {
         return new TicketResponse(
                 10L,
@@ -201,6 +237,25 @@ class TicketControllerTest {
                 ticket.requesterName(),
                 2L,
                 "Sam Lee",
+                ticket.createdAt(),
+                ticket.updatedAt(),
+                ticket.dueAt(),
+                ticket.resolvedAt(),
+                ticket.closedAt());
+    }
+
+    private TicketResponse ticketWithStatus(TicketStatus status) {
+        TicketResponse ticket = ticketResponse();
+        return new TicketResponse(
+                ticket.id(),
+                ticket.title(),
+                ticket.description(),
+                status,
+                ticket.priority(),
+                ticket.requesterId(),
+                ticket.requesterName(),
+                ticket.assignedAgentId(),
+                ticket.assignedAgentName(),
                 ticket.createdAt(),
                 ticket.updatedAt(),
                 ticket.dueAt(),

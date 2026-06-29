@@ -1,6 +1,7 @@
 package com.joserojas.supportdesk.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.joserojas.supportdesk.dto.request.AssignTicketRequest;
 import com.joserojas.supportdesk.dto.request.CreateTicketRequest;
+import com.joserojas.supportdesk.dto.request.UpdateTicketStatusRequest;
 import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.entity.AppUser;
 import com.joserojas.supportdesk.entity.Ticket;
@@ -149,5 +151,86 @@ class TicketServiceTest {
                 () -> ticketService.assignTicket(10L, new AssignTicketRequest(1L)));
 
         verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    @Test
+    void changesOpenTicketToInProgress() {
+        Ticket ticket = openTicket();
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+        when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+        TicketResponse response = ticketService.updateTicketStatus(
+                10L,
+                new UpdateTicketStatusRequest(TicketStatus.IN_PROGRESS));
+
+        assertEquals(TicketStatus.IN_PROGRESS, response.status());
+        assertNull(response.resolvedAt());
+        assertNull(response.closedAt());
+        verify(ticketRepository).save(ticket);
+    }
+
+    @Test
+    void resolvesInProgressTicketAndSetsResolvedAt() {
+        Ticket ticket = openTicket();
+        ticket.setStatus(TicketStatus.IN_PROGRESS);
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+        when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+        TicketResponse response = ticketService.updateTicketStatus(
+                10L,
+                new UpdateTicketStatusRequest(TicketStatus.RESOLVED));
+
+        assertEquals(TicketStatus.RESOLVED, response.status());
+        assertNotNull(response.resolvedAt());
+        assertNull(response.closedAt());
+    }
+
+    @Test
+    void closesResolvedTicketAndSetsClosedAt() {
+        Ticket ticket = openTicket();
+        ticket.setStatus(TicketStatus.RESOLVED);
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+        when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+        TicketResponse response = ticketService.updateTicketStatus(
+                10L,
+                new UpdateTicketStatusRequest(TicketStatus.CLOSED));
+
+        assertEquals(TicketStatus.CLOSED, response.status());
+        assertNotNull(response.closedAt());
+    }
+
+    @Test
+    void rejectsChangingClosedTicketToInProgress() {
+        Ticket ticket = openTicket();
+        ticket.setStatus(TicketStatus.CLOSED);
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+
+        assertThrows(
+                InvalidTicketOperationException.class,
+                () -> ticketService.updateTicketStatus(
+                        10L,
+                        new UpdateTicketStatusRequest(TicketStatus.IN_PROGRESS)));
+
+        verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    @Test
+    void rejectsChangingOpenTicketDirectlyToClosed() {
+        Ticket ticket = openTicket();
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+
+        assertThrows(
+                InvalidTicketOperationException.class,
+                () -> ticketService.updateTicketStatus(
+                        10L,
+                        new UpdateTicketStatusRequest(TicketStatus.CLOSED)));
+
+        verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    private Ticket openTicket() {
+        AppUser requester = new AppUser("Alex Rivera", "alex@example.com", Role.REQUESTER);
+        return new Ticket("Cannot sign in", "Valid credentials are rejected", Priority.HIGH, requester);
     }
 }
