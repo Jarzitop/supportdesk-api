@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.joserojas.supportdesk.dto.request.AssignTicketRequest;
 import com.joserojas.supportdesk.dto.request.CreateTicketRequest;
 import com.joserojas.supportdesk.dto.request.UpdateTicketStatusRequest;
+import com.joserojas.supportdesk.dto.response.PageResponse;
 import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.enums.Priority;
 import com.joserojas.supportdesk.enums.TicketStatus;
@@ -62,18 +63,68 @@ class TicketControllerTest {
     }
 
     @Test
-    void getAllTicketsReturnsFilteredTickets() throws Exception {
-        when(ticketService.getAllTickets(TicketStatus.OPEN, Priority.HIGH))
-                .thenReturn(List.of(ticketResponse()));
+    void getAllTicketsReturnsPaginatedStructureWithDefaults() throws Exception {
+        when(ticketService.getAllTickets(0, 20, null, null)).thenReturn(pageResponse());
+
+        mockMvc.perform(get("/api/v1/tickets"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(10))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.first").value(true))
+                .andExpect(jsonPath("$.last").value(true));
+
+        verify(ticketService).getAllTickets(0, 20, null, null);
+    }
+
+    @Test
+    void getAllTicketsUsesRequestedPageSize() throws Exception {
+        when(ticketService.getAllTickets(0, 2, null, null))
+                .thenReturn(new PageResponse<>(List.of(ticketResponse()), 0, 2, 1, 1, true, true));
+
+        mockMvc.perform(get("/api/v1/tickets").param("page", "0").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.size").value(2));
+
+        verify(ticketService).getAllTickets(0, 2, null, null);
+    }
+
+    @Test
+    void getAllTicketsFiltersByStatus() throws Exception {
+        when(ticketService.getAllTickets(0, 20, TicketStatus.OPEN, null)).thenReturn(pageResponse());
+
+        mockMvc.perform(get("/api/v1/tickets").param("status", "OPEN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].status").value("OPEN"));
+
+        verify(ticketService).getAllTickets(0, 20, TicketStatus.OPEN, null);
+    }
+
+    @Test
+    void getAllTicketsFiltersByPriority() throws Exception {
+        when(ticketService.getAllTickets(0, 20, null, Priority.HIGH)).thenReturn(pageResponse());
+
+        mockMvc.perform(get("/api/v1/tickets").param("priority", "HIGH"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].priority").value("HIGH"));
+
+        verify(ticketService).getAllTickets(0, 20, null, Priority.HIGH);
+    }
+
+    @Test
+    void getAllTicketsFiltersByStatusAndPriority() throws Exception {
+        when(ticketService.getAllTickets(0, 20, TicketStatus.OPEN, Priority.HIGH)).thenReturn(pageResponse());
 
         mockMvc.perform(get("/api/v1/tickets")
                         .param("status", "OPEN")
                         .param("priority", "HIGH"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(10))
-                .andExpect(jsonPath("$[0].title").value("Cannot sign in"));
+                .andExpect(jsonPath("$.content[0].id").value(10));
 
-        verify(ticketService).getAllTickets(TicketStatus.OPEN, Priority.HIGH);
+        verify(ticketService).getAllTickets(0, 20, TicketStatus.OPEN, Priority.HIGH);
     }
 
     @Test
@@ -317,6 +368,10 @@ class TicketControllerTest {
                 LocalDateTime.of(2026, 6, 29, 12, 0),
                 null,
                 null);
+    }
+
+    private PageResponse<TicketResponse> pageResponse() {
+        return new PageResponse<>(List.of(ticketResponse()), 0, 20, 1, 1, true, true);
     }
 
     private TicketResponse assignedTicketResponse() {

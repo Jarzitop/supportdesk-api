@@ -1,7 +1,5 @@
 package com.joserojas.supportdesk.controller;
 
-import java.util.List;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.joserojas.supportdesk.dto.request.AssignTicketRequest;
 import com.joserojas.supportdesk.dto.request.CreateTicketRequest;
 import com.joserojas.supportdesk.dto.request.UpdateTicketStatusRequest;
+import com.joserojas.supportdesk.dto.response.PageResponse;
 import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.enums.Priority;
 import com.joserojas.supportdesk.enums.TicketStatus;
@@ -45,10 +44,12 @@ public class TicketController {
 
     @GetMapping
     @Operation(summary = "List and filter tickets")
-    public ResponseEntity<List<TicketResponse>> getAllTickets(
+    public ResponseEntity<PageResponse<TicketResponse>> getAllTickets(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) TicketStatus status,
             @RequestParam(required = false) Priority priority) {
-        return ResponseEntity.ok(ticketService.getAllTickets(status, priority));
+        return ResponseEntity.ok(ticketService.getAllTickets(page, size, status, priority));
     }
 
     @GetMapping("/{id}")

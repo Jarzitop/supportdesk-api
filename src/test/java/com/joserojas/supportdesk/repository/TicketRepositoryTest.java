@@ -8,6 +8,10 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,18 +50,23 @@ class TicketRepositoryTest {
                 requester,
                 supportAgent);
         Ticket openLow = saveTicket("Open low", Priority.LOW, TicketStatus.OPEN, requester, null);
+        Pageable pageable = PageRequest.of(
+                0,
+                10,
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
 
         assertEquals(
                 List.of(openLow.getId(), openHigh.getId()),
-                ids(ticketRepository.findByStatusOrderByCreatedAtDescIdDesc(TicketStatus.OPEN)));
+                ids(ticketRepository.findByStatus(TicketStatus.OPEN, pageable)));
         assertEquals(
                 List.of(inProgressHigh.getId(), openHigh.getId()),
-                ids(ticketRepository.findByPriorityOrderByCreatedAtDescIdDesc(Priority.HIGH)));
+                ids(ticketRepository.findByPriority(Priority.HIGH, pageable)));
         assertEquals(
                 List.of(openHigh.getId()),
-                ids(ticketRepository.findByStatusAndPriorityOrderByCreatedAtDescIdDesc(
+                ids(ticketRepository.findByStatusAndPriority(
                         TicketStatus.OPEN,
-                        Priority.HIGH)));
+                        Priority.HIGH,
+                        pageable)));
     }
 
     @Test
@@ -78,11 +87,16 @@ class TicketRepositoryTest {
                 .executeUpdate();
         entityManager.clear();
 
-        List<Ticket> tickets = ticketRepository.findAllByOrderByCreatedAtDescIdDesc();
+        Pageable pageable = PageRequest.of(
+                0,
+                1,
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
+        Page<Ticket> tickets = ticketRepository.findAllBy(pageable);
 
-        assertEquals(List.of(second.getId(), first.getId()), ids(tickets));
-        assertEquals("Alex Rivera", tickets.getFirst().getRequester().getFullName());
-        assertEquals("Sam Lee", tickets.getFirst().getAssignedAgent().getFullName());
+        assertEquals(List.of(second.getId()), ids(tickets));
+        assertEquals(2, tickets.getTotalElements());
+        assertEquals("Alex Rivera", tickets.getContent().getFirst().getRequester().getFullName());
+        assertEquals("Sam Lee", tickets.getContent().getFirst().getAssignedAgent().getFullName());
     }
 
     private AppUser saveUser(String fullName, String email, Role role) {
@@ -103,5 +117,9 @@ class TicketRepositoryTest {
 
     private List<Long> ids(List<Ticket> tickets) {
         return tickets.stream().map(Ticket::getId).toList();
+    }
+
+    private List<Long> ids(Page<Ticket> tickets) {
+        return ids(tickets.getContent());
     }
 }

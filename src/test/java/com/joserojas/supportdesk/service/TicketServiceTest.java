@@ -21,10 +21,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import com.joserojas.supportdesk.dto.request.AssignTicketRequest;
 import com.joserojas.supportdesk.dto.request.CreateTicketRequest;
 import com.joserojas.supportdesk.dto.request.UpdateTicketStatusRequest;
+import com.joserojas.supportdesk.dto.response.PageResponse;
 import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.entity.AppUser;
 import com.joserojas.supportdesk.entity.Ticket;
@@ -96,49 +99,52 @@ class TicketServiceTest {
 
     @Test
     void listsAllTicketsInRepositoryOrder() {
-        when(ticketRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of());
+        when(ticketRepository.findAllBy(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
 
-        List<TicketResponse> responses = ticketService.getAllTickets(null, null);
+        PageResponse<TicketResponse> response = ticketService.getAllTickets(0, 20, null, null);
 
-        assertEquals(List.of(), responses);
-        verify(ticketRepository).findAllByOrderByCreatedAtDescIdDesc();
+        assertEquals(List.of(), response.content());
+        verify(ticketRepository).findAllBy(any(Pageable.class));
     }
 
     @Test
     void filtersTicketsByStatus() {
-        when(ticketRepository.findByStatusOrderByCreatedAtDescIdDesc(TicketStatus.OPEN))
-                .thenReturn(List.of());
+        when(ticketRepository.findByStatus(eq(TicketStatus.OPEN), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
 
-        List<TicketResponse> responses = ticketService.getAllTickets(TicketStatus.OPEN, null);
+        PageResponse<TicketResponse> response = ticketService.getAllTickets(0, 20, TicketStatus.OPEN, null);
 
-        assertEquals(List.of(), responses);
-        verify(ticketRepository).findByStatusOrderByCreatedAtDescIdDesc(TicketStatus.OPEN);
+        assertEquals(List.of(), response.content());
+        verify(ticketRepository).findByStatus(eq(TicketStatus.OPEN), any(Pageable.class));
     }
 
     @Test
     void filtersTicketsByPriority() {
-        when(ticketRepository.findByPriorityOrderByCreatedAtDescIdDesc(Priority.CRITICAL))
-                .thenReturn(List.of());
+        when(ticketRepository.findByPriority(eq(Priority.CRITICAL), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
 
-        List<TicketResponse> responses = ticketService.getAllTickets(null, Priority.CRITICAL);
+        PageResponse<TicketResponse> response = ticketService.getAllTickets(0, 20, null, Priority.CRITICAL);
 
-        assertEquals(List.of(), responses);
-        verify(ticketRepository).findByPriorityOrderByCreatedAtDescIdDesc(Priority.CRITICAL);
+        assertEquals(List.of(), response.content());
+        verify(ticketRepository).findByPriority(eq(Priority.CRITICAL), any(Pageable.class));
     }
 
     @Test
     void filtersTicketsByStatusAndPriorityTogether() {
-        when(ticketRepository.findByStatusAndPriorityOrderByCreatedAtDescIdDesc(
-                TicketStatus.OPEN,
-                Priority.CRITICAL))
-                .thenReturn(List.of());
+        when(ticketRepository.findByStatusAndPriority(
+                eq(TicketStatus.OPEN),
+                eq(Priority.CRITICAL),
+                any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
 
-        List<TicketResponse> responses = ticketService.getAllTickets(TicketStatus.OPEN, Priority.CRITICAL);
+        PageResponse<TicketResponse> response = ticketService.getAllTickets(
+                0, 20, TicketStatus.OPEN, Priority.CRITICAL);
 
-        assertEquals(List.of(), responses);
-        verify(ticketRepository).findByStatusAndPriorityOrderByCreatedAtDescIdDesc(
-                TicketStatus.OPEN,
-                Priority.CRITICAL);
+        assertEquals(List.of(), response.content());
+        verify(ticketRepository).findByStatusAndPriority(
+                eq(TicketStatus.OPEN),
+                eq(Priority.CRITICAL),
+                any(Pageable.class));
     }
 
     @Test

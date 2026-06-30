@@ -1,15 +1,19 @@
 package com.joserojas.supportdesk.service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Objects;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.joserojas.supportdesk.dto.request.AssignTicketRequest;
 import com.joserojas.supportdesk.dto.request.CreateTicketRequest;
 import com.joserojas.supportdesk.dto.request.UpdateTicketStatusRequest;
+import com.joserojas.supportdesk.dto.response.PageResponse;
 import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.entity.AppUser;
 import com.joserojas.supportdesk.entity.Ticket;
@@ -54,22 +58,28 @@ public class TicketService {
     }
 
     @Transactional(readOnly = true)
-    public List<TicketResponse> getAllTickets(TicketStatus status, Priority priority) {
-        List<Ticket> tickets;
+    public PageResponse<TicketResponse> getAllTickets(
+            int page,
+            int size,
+            TicketStatus status,
+            Priority priority) {
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
+        Page<Ticket> tickets;
 
         if (status != null && priority != null) {
-            tickets = ticketRepository.findByStatusAndPriorityOrderByCreatedAtDescIdDesc(status, priority);
+            tickets = ticketRepository.findByStatusAndPriority(status, priority, pageable);
         } else if (status != null) {
-            tickets = ticketRepository.findByStatusOrderByCreatedAtDescIdDesc(status);
+            tickets = ticketRepository.findByStatus(status, pageable);
         } else if (priority != null) {
-            tickets = ticketRepository.findByPriorityOrderByCreatedAtDescIdDesc(priority);
+            tickets = ticketRepository.findByPriority(priority, pageable);
         } else {
-            tickets = ticketRepository.findAllByOrderByCreatedAtDescIdDesc();
+            tickets = ticketRepository.findAllBy(pageable);
         }
 
-        return tickets.stream()
-                .map(this::toResponse)
-                .toList();
+        return PageResponse.from(tickets.map(this::toResponse));
     }
 
     @Transactional(readOnly = true)

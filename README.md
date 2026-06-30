@@ -216,8 +216,24 @@ curl -X POST http://localhost:8080/api/v1/tickets \
 
 ### List tickets
 
+The endpoint returns a paginated response. `page` is zero-based and defaults to `0`; `size` defaults to `20`.
+
 ```bash
-curl http://localhost:8080/api/v1/tickets
+curl "http://localhost:8080/api/v1/tickets?page=0&size=20"
+```
+
+Example response:
+
+```json
+{
+  "content": [],
+  "page": 0,
+  "size": 20,
+  "totalElements": 0,
+  "totalPages": 0,
+  "first": true,
+  "last": true
+}
 ```
 
 ### Filter tickets by status and priority
@@ -225,7 +241,7 @@ curl http://localhost:8080/api/v1/tickets
 Both filters are optional and can be used separately or together:
 
 ```bash
-curl "http://localhost:8080/api/v1/tickets?status=OPEN&priority=HIGH"
+curl "http://localhost:8080/api/v1/tickets?page=0&size=20&status=OPEN&priority=HIGH"
 ```
 
 ### Get a ticket by ID
