@@ -41,6 +41,7 @@ The project is an MVP intended for learning and portfolio use. It is not present
 * Maven with Maven Wrapper
 * JUnit, MockMvc, and Mockito
 * Docker Compose
+* OpenAPI and Swagger UI
 
 ## Architecture
 
@@ -101,6 +102,13 @@ http://localhost:8080
 ```powershell
 .\mvnw.cmd test
 ```
+
+## API Documentation
+
+With the application running, interactive Swagger UI documentation and the generated OpenAPI specification are available at:
+
+* Swagger UI: `http://localhost:8080/swagger-ui.html`
+* OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 
 ## API Endpoints
 
@@ -198,7 +206,6 @@ The selected user must have the `SUPPORT_AGENT` role.
 
 ## Roadmap
 
-* OpenAPI/Swagger documentation
 * Pagination and sorting
 * Spring Security and JWT authentication
 * Continuous integration with GitHub Actions

@@ -15,10 +15,13 @@ import com.joserojas.supportdesk.dto.request.CreateTicketCommentRequest;
 import com.joserojas.supportdesk.dto.response.TicketCommentResponse;
 import com.joserojas.supportdesk.service.TicketCommentService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/tickets/{ticketId}/comments")
+@Tag(name = "Ticket Comments", description = "Ticket comment endpoints")
 public class TicketCommentController {
 
     private final TicketCommentService ticketCommentService;
@@ -28,6 +31,7 @@ public class TicketCommentController {
     }
 
     @PostMapping
+    @Operation(summary = "Add a comment to a ticket")
     public ResponseEntity<TicketCommentResponse> addComment(
             @PathVariable Long ticketId,
             @Valid @RequestBody CreateTicketCommentRequest request) {
@@ -36,6 +40,7 @@ public class TicketCommentController {
     }
 
     @GetMapping
+    @Operation(summary = "List a ticket's comments")
     public ResponseEntity<List<TicketCommentResponse>> getCommentsByTicketId(@PathVariable Long ticketId) {
         return ResponseEntity.ok(ticketCommentService.getCommentsByTicketId(ticketId));
     }
