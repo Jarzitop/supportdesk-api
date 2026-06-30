@@ -29,6 +29,7 @@ The project is an MVP intended for learning and portfolio use. It is not present
 * PostgreSQL persistence through Spring Data JPA
 * Docker Compose configuration for a local PostgreSQL database
 * Service, controller, request validation, and utility tests
+* Automated test runs with GitHub Actions CI
 
 ## Tech Stack
 
@@ -208,7 +209,6 @@ The selected user must have the `SUPPORT_AGENT` role.
 
 * Pagination and sorting
 * Spring Security and JWT authentication
-* Continuous integration with GitHub Actions
 * Test database isolation
 * Deployment-specific configuration profile
 
