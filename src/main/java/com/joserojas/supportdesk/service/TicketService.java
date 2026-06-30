@@ -104,6 +104,7 @@ public class TicketService {
         String oldValue = previousAssignedAgent == null ? null : previousAssignedAgent.getId().toString();
         String newValue = assignedAgent.getId().toString();
         ticket.setAssignedAgent(assignedAgent);
+        ticket.markUpdated();
 
         Ticket savedTicket = ticketRepository.save(ticket);
         ticketHistoryService.recordChange(savedTicket, null, "assignedAgent", oldValue, newValue);
@@ -133,6 +134,7 @@ public class TicketService {
             ticket.setClosedAt(LocalDateTime.now());
         }
 
+        ticket.markUpdated();
         Ticket savedTicket = ticketRepository.save(ticket);
         ticketHistoryService.recordChange(
                 savedTicket,

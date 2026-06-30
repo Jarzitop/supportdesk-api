@@ -130,6 +130,7 @@ class TicketServiceTest {
 
         assertEquals("Sam Lee", response.assignedAgentName());
         assertEquals(TicketStatus.OPEN, response.status());
+        assertNotNull(response.updatedAt());
         verify(ticketRepository).save(ticket);
         verify(ticketHistoryService).recordChange(ticket, null, "assignedAgent", null, "2");
     }
@@ -191,6 +192,7 @@ class TicketServiceTest {
                 new UpdateTicketStatusRequest(TicketStatus.IN_PROGRESS));
 
         assertEquals(TicketStatus.IN_PROGRESS, response.status());
+        assertNotNull(response.updatedAt());
         assertNull(response.resolvedAt());
         assertNull(response.closedAt());
         verify(ticketRepository).save(ticket);
