@@ -1,11 +1,11 @@
 package com.joserojas.supportdesk.service;
 
-import java.util.List;
-
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.joserojas.supportdesk.dto.request.CreateTicketCommentRequest;
+import com.joserojas.supportdesk.dto.response.PageResponse;
 import com.joserojas.supportdesk.dto.response.TicketCommentResponse;
 import com.joserojas.supportdesk.entity.AppUser;
 import com.joserojas.supportdesk.entity.Ticket;
@@ -47,15 +47,14 @@ public class TicketCommentService {
     }
 
     @Transactional(readOnly = true)
-    public List<TicketCommentResponse> getCommentsByTicketId(Long ticketId) {
+    public PageResponse<TicketCommentResponse> getCommentsByTicketId(Long ticketId, int page, int size) {
         if (!ticketRepository.existsById(ticketId)) {
             throw new ResourceNotFoundException("Ticket with id " + ticketId + " was not found");
         }
 
-        return ticketCommentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        return PageResponse.from(ticketCommentRepository
+                .findByTicketIdOrderByCreatedAtAsc(ticketId, PageRequest.of(page, size))
+                .map(this::toResponse));
     }
 
     private TicketCommentResponse toResponse(TicketComment comment) {

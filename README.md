@@ -285,14 +285,18 @@ curl -X POST http://localhost:8080/api/v1/tickets/1/comments \
 
 ### List comments
 
+The response uses the same paginated structure as ticket listings. `page` is zero-based and defaults to `0`; `size` defaults to `20`.
+
 ```bash
-curl http://localhost:8080/api/v1/tickets/1/comments
+curl "http://localhost:8080/api/v1/tickets/1/comments?page=0&size=20"
 ```
 
 ### View ticket history
 
+History responses are also paginated with default values `page=0` and `size=20`.
+
 ```bash
-curl http://localhost:8080/api/v1/tickets/1/history
+curl "http://localhost:8080/api/v1/tickets/1/history?page=0&size=20"
 ```
 
 ## Technical Decisions

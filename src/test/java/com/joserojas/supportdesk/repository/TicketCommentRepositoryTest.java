@@ -8,6 +8,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +39,7 @@ class TicketCommentRepositoryTest {
     private EntityManager entityManager;
 
     @Test
-    void findsTicketCommentsByCreatedAtAscending() {
+    void paginatesTicketCommentsByCreatedAtAscending() {
         AppUser author = appUserRepository.saveAndFlush(
                 new AppUser("Alex Rivera", "alex@example.com", Role.REQUESTER));
         Ticket ticket = ticketRepository.saveAndFlush(
@@ -46,16 +48,22 @@ class TicketCommentRepositoryTest {
                 new TicketComment(ticket, author, "Later comment"));
         TicketComment earlier = ticketCommentRepository.saveAndFlush(
                 new TicketComment(ticket, author, "Earlier comment"));
+        TicketComment latest = ticketCommentRepository.saveAndFlush(
+                new TicketComment(ticket, author, "Latest comment"));
 
         setCreatedAt(later.getId(), LocalDateTime.of(2026, 6, 29, 13, 0));
         setCreatedAt(earlier.getId(), LocalDateTime.of(2026, 6, 29, 12, 0));
+        setCreatedAt(latest.getId(), LocalDateTime.of(2026, 6, 29, 14, 0));
         entityManager.clear();
 
-        List<TicketComment> comments = ticketCommentRepository.findByTicketIdOrderByCreatedAtAsc(ticket.getId());
+        Page<TicketComment> comments = ticketCommentRepository.findByTicketIdOrderByCreatedAtAsc(
+                ticket.getId(), PageRequest.of(0, 2));
 
         assertEquals(
                 List.of("Earlier comment", "Later comment"),
-                comments.stream().map(TicketComment::getContent).toList());
+                comments.getContent().stream().map(TicketComment::getContent).toList());
+        assertEquals(3, comments.getTotalElements());
+        assertEquals(2, comments.getTotalPages());
     }
 
     private void setCreatedAt(Long commentId, LocalDateTime createdAt) {

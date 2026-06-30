@@ -8,6 +8,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +39,7 @@ class TicketHistoryRepositoryTest {
     private EntityManager entityManager;
 
     @Test
-    void findsTicketHistoryByChangedAtAscending() {
+    void paginatesTicketHistoryByChangedAtAscending() {
         AppUser requester = appUserRepository.saveAndFlush(
                 new AppUser("Alex Rivera", "alex@example.com", Role.REQUESTER));
         Ticket ticket = ticketRepository.saveAndFlush(
@@ -46,16 +48,22 @@ class TicketHistoryRepositoryTest {
                 new TicketHistory(ticket, null, "status", "OPEN", "IN_PROGRESS"));
         TicketHistory earlier = ticketHistoryRepository.saveAndFlush(
                 new TicketHistory(ticket, null, "assignedAgent", null, "2"));
+        TicketHistory latest = ticketHistoryRepository.saveAndFlush(
+                new TicketHistory(ticket, null, "status", "IN_PROGRESS", "RESOLVED"));
 
         setChangedAt(later.getId(), LocalDateTime.of(2026, 6, 29, 13, 0));
         setChangedAt(earlier.getId(), LocalDateTime.of(2026, 6, 29, 12, 0));
+        setChangedAt(latest.getId(), LocalDateTime.of(2026, 6, 29, 14, 0));
         entityManager.clear();
 
-        List<TicketHistory> history = ticketHistoryRepository.findByTicketIdOrderByChangedAtAsc(ticket.getId());
+        Page<TicketHistory> history = ticketHistoryRepository.findByTicketIdOrderByChangedAtAsc(
+                ticket.getId(), PageRequest.of(0, 2));
 
         assertEquals(
                 List.of("assignedAgent", "status"),
-                history.stream().map(TicketHistory::getFieldName).toList());
+                history.getContent().stream().map(TicketHistory::getFieldName).toList());
+        assertEquals(3, history.getTotalElements());
+        assertEquals(2, history.getTotalPages());
     }
 
     private void setChangedAt(Long historyId, LocalDateTime changedAt) {

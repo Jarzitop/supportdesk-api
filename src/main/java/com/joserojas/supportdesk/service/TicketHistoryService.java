@@ -1,10 +1,10 @@
 package com.joserojas.supportdesk.service;
 
-import java.util.List;
-
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.joserojas.supportdesk.dto.response.PageResponse;
 import com.joserojas.supportdesk.dto.response.TicketHistoryResponse;
 import com.joserojas.supportdesk.entity.AppUser;
 import com.joserojas.supportdesk.entity.Ticket;
@@ -27,15 +27,14 @@ public class TicketHistoryService {
     }
 
     @Transactional(readOnly = true)
-    public List<TicketHistoryResponse> getHistoryByTicketId(Long ticketId) {
+    public PageResponse<TicketHistoryResponse> getHistoryByTicketId(Long ticketId, int page, int size) {
         if (!ticketRepository.existsById(ticketId)) {
             throw new ResourceNotFoundException("Ticket with id " + ticketId + " was not found");
         }
 
-        return ticketHistoryRepository.findByTicketIdOrderByChangedAtAsc(ticketId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        return PageResponse.from(ticketHistoryRepository
+                .findByTicketIdOrderByChangedAtAsc(ticketId, PageRequest.of(page, size))
+                .map(this::toResponse));
     }
 
     @Transactional

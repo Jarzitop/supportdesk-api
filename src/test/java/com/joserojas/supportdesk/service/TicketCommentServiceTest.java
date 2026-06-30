@@ -3,6 +3,7 @@ package com.joserojas.supportdesk.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -15,8 +16,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import com.joserojas.supportdesk.dto.request.CreateTicketCommentRequest;
+import com.joserojas.supportdesk.dto.response.PageResponse;
 import com.joserojas.supportdesk.dto.response.TicketCommentResponse;
 import com.joserojas.supportdesk.entity.AppUser;
 import com.joserojas.supportdesk.entity.Ticket;
@@ -100,17 +105,32 @@ class TicketCommentServiceTest {
         TicketComment firstComment = new TicketComment(ticket, author, "First comment");
         TicketComment secondComment = new TicketComment(ticket, author, "Second comment");
         when(ticketRepository.existsById(10L)).thenReturn(true);
-        when(ticketCommentRepository.findByTicketIdOrderByCreatedAtAsc(10L))
-                .thenReturn(List.of(firstComment, secondComment));
+        when(ticketCommentRepository.findByTicketIdOrderByCreatedAtAsc(eq(10L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(
+                        List.of(firstComment, secondComment), PageRequest.of(0, 2), 2));
         when(ticket.getId()).thenReturn(10L);
         when(author.getId()).thenReturn(2L);
         when(author.getFullName()).thenReturn("Sam Lee");
 
-        List<TicketCommentResponse> responses = ticketCommentService.getCommentsByTicketId(10L);
+        PageResponse<TicketCommentResponse> response = ticketCommentService.getCommentsByTicketId(10L, 0, 2);
 
         assertEquals(List.of("First comment", "Second comment"),
-                responses.stream().map(TicketCommentResponse::content).toList());
+                response.content().stream().map(TicketCommentResponse::content).toList());
+        assertEquals(2, response.size());
         verify(ticketRepository).existsById(10L);
-        verify(ticketCommentRepository).findByTicketIdOrderByCreatedAtAsc(10L);
+        verify(ticketCommentRepository).findByTicketIdOrderByCreatedAtAsc(
+                eq(10L), eq(PageRequest.of(0, 2)));
+    }
+
+    @Test
+    void rejectsCommentListWhenTicketDoesNotExist() {
+        when(ticketRepository.existsById(99L)).thenReturn(false);
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> ticketCommentService.getCommentsByTicketId(99L, 0, 20));
+
+        verify(ticketCommentRepository, never())
+                .findByTicketIdOrderByCreatedAtAsc(any(Long.class), any(Pageable.class));
     }
 }

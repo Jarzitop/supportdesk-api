@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,7 +17,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
+import com.joserojas.supportdesk.dto.response.PageResponse;
 import com.joserojas.supportdesk.dto.response.TicketHistoryResponse;
 import com.joserojas.supportdesk.entity.AppUser;
 import com.joserojas.supportdesk.entity.Ticket;
@@ -62,20 +67,21 @@ class TicketHistoryServiceTest {
         TicketHistory assignment = new TicketHistory(ticket, changedBy, "assignedAgent", null, "2");
         TicketHistory status = new TicketHistory(ticket, null, "status", "OPEN", "IN_PROGRESS");
         when(ticketRepository.existsById(10L)).thenReturn(true);
-        when(ticketHistoryRepository.findByTicketIdOrderByChangedAtAsc(10L))
-                .thenReturn(List.of(assignment, status));
+        when(ticketHistoryRepository.findByTicketIdOrderByChangedAtAsc(eq(10L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(assignment, status), PageRequest.of(0, 2), 2));
         when(ticket.getId()).thenReturn(10L);
         when(changedBy.getId()).thenReturn(1L);
         when(changedBy.getFullName()).thenReturn("Alex Rivera");
 
-        List<TicketHistoryResponse> responses = ticketHistoryService.getHistoryByTicketId(10L);
+        PageResponse<TicketHistoryResponse> response = ticketHistoryService.getHistoryByTicketId(10L, 0, 2);
 
         assertEquals(List.of("assignedAgent", "status"),
-                responses.stream().map(TicketHistoryResponse::fieldName).toList());
-        assertEquals("Alex Rivera", responses.getFirst().changedByName());
-        assertNull(responses.get(1).changedById());
+                response.content().stream().map(TicketHistoryResponse::fieldName).toList());
+        assertEquals("Alex Rivera", response.content().getFirst().changedByName());
+        assertNull(response.content().get(1).changedById());
         verify(ticketRepository).existsById(10L);
-        verify(ticketHistoryRepository).findByTicketIdOrderByChangedAtAsc(10L);
+        verify(ticketHistoryRepository).findByTicketIdOrderByChangedAtAsc(
+                eq(10L), eq(PageRequest.of(0, 2)));
     }
 
     @Test
@@ -84,9 +90,9 @@ class TicketHistoryServiceTest {
 
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> ticketHistoryService.getHistoryByTicketId(99L));
+                () -> ticketHistoryService.getHistoryByTicketId(99L, 0, 20));
 
         verify(ticketHistoryRepository, never())
-                .findByTicketIdOrderByChangedAtAsc(any(Long.class));
+                .findByTicketIdOrderByChangedAtAsc(any(Long.class), any(Pageable.class));
     }
 }

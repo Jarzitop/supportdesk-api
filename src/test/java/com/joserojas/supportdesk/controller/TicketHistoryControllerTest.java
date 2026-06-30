@@ -15,6 +15,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.joserojas.supportdesk.dto.response.PageResponse;
 import com.joserojas.supportdesk.dto.response.TicketHistoryResponse;
 import com.joserojas.supportdesk.exception.ResourceNotFoundException;
 import com.joserojas.supportdesk.service.TicketHistoryService;
@@ -29,22 +30,25 @@ class TicketHistoryControllerTest {
     private TicketHistoryService ticketHistoryService;
 
     @Test
-    void getHistoryReturnsTicketHistory() throws Exception {
-        when(ticketHistoryService.getHistoryByTicketId(10L)).thenReturn(List.of(historyResponse()));
+    void getHistoryReturnsRequestedPageOfTicketHistory() throws Exception {
+        when(ticketHistoryService.getHistoryByTicketId(10L, 0, 2))
+                .thenReturn(new PageResponse<>(
+                        List.of(historyResponse(), historyResponse()), 0, 2, 3, 2, true, false));
 
-        mockMvc.perform(get("/api/v1/tickets/10/history"))
+        mockMvc.perform(get("/api/v1/tickets/10/history").param("page", "0").param("size", "2"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].ticketId").value(10))
-                .andExpect(jsonPath("$[0].fieldName").value("status"))
-                .andExpect(jsonPath("$[0].oldValue").value("OPEN"))
-                .andExpect(jsonPath("$[0].newValue").value("IN_PROGRESS"));
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].ticketId").value(10))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(3));
 
-        verify(ticketHistoryService).getHistoryByTicketId(10L);
+        verify(ticketHistoryService).getHistoryByTicketId(10L, 0, 2);
     }
 
     @Test
     void getHistoryReturnsNotFoundWhenTicketDoesNotExist() throws Exception {
-        when(ticketHistoryService.getHistoryByTicketId(99L))
+        when(ticketHistoryService.getHistoryByTicketId(99L, 0, 20))
                 .thenThrow(new ResourceNotFoundException("Ticket with id 99 was not found"));
 
         mockMvc.perform(get("/api/v1/tickets/99/history"))

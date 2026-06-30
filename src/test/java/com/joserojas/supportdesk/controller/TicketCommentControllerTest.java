@@ -20,6 +20,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.joserojas.supportdesk.dto.request.CreateTicketCommentRequest;
+import com.joserojas.supportdesk.dto.response.PageResponse;
 import com.joserojas.supportdesk.dto.response.TicketCommentResponse;
 import com.joserojas.supportdesk.exception.ResourceNotFoundException;
 import com.joserojas.supportdesk.service.TicketCommentService;
@@ -55,15 +56,31 @@ class TicketCommentControllerTest {
     }
 
     @Test
-    void getCommentsReturnsTicketComments() throws Exception {
-        when(ticketCommentService.getCommentsByTicketId(10L)).thenReturn(List.of(commentResponse()));
+    void getCommentsReturnsRequestedPageOfTicketComments() throws Exception {
+        when(ticketCommentService.getCommentsByTicketId(10L, 0, 2))
+                .thenReturn(new PageResponse<>(
+                        List.of(commentResponse(), commentResponse()), 0, 2, 3, 2, true, false));
 
-        mockMvc.perform(get("/api/v1/tickets/10/comments"))
+        mockMvc.perform(get("/api/v1/tickets/10/comments").param("page", "0").param("size", "2"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(20))
-                .andExpect(jsonPath("$[0].content").value("I am investigating this issue."));
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].id").value(20))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(3));
 
-        verify(ticketCommentService).getCommentsByTicketId(10L);
+        verify(ticketCommentService).getCommentsByTicketId(10L, 0, 2);
+    }
+
+    @Test
+    void getCommentsReturnsNotFoundWhenTicketDoesNotExist() throws Exception {
+        when(ticketCommentService.getCommentsByTicketId(99L, 0, 20))
+                .thenThrow(new ResourceNotFoundException("Ticket with id 99 was not found"));
+
+        mockMvc.perform(get("/api/v1/tickets/99/comments"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Ticket with id 99 was not found"));
     }
 
     @Test
