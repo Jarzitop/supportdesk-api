@@ -14,6 +14,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -140,6 +141,28 @@ class AppUserControllerTest {
                 .andExpect(jsonPath("$.error").value("Conflict"))
                 .andExpect(jsonPath("$.message")
                         .value("A user with email 'alex@example.com' already exists"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void createUserReturnsSafeConflictForDatabaseIntegrityViolation() throws Exception {
+        when(appUserService.createUser(any(CreateUserRequest.class)))
+                .thenThrow(new DataIntegrityViolationException("users_email_unique constraint details"));
+
+        mockMvc.perform(post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fullName": "Alex Rivera",
+                                  "email": "alex@example.com",
+                                  "role": "REQUESTER"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message")
+                        .value("A resource with the same unique value already exists."))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 

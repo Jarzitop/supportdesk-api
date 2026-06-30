@@ -2,6 +2,7 @@ package com.joserojas.supportdesk.exception;
 
 import java.time.LocalDateTime;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -23,6 +24,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateResource(DuplicateResourceException exception) {
         return buildResponse(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException exception) {
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                "A resource with the same unique value already exists.");
     }
 
     @ExceptionHandler(InvalidTicketOperationException.class)
