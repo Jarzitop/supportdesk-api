@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.joserojas.supportdesk.dto.request.CreateTicketCommentRequest;
 import com.joserojas.supportdesk.dto.response.TicketCommentResponse;
+import com.joserojas.supportdesk.exception.ResourceNotFoundException;
 import com.joserojas.supportdesk.service.TicketCommentService;
 
 @WebMvcTest(TicketCommentController.class)
@@ -79,6 +80,26 @@ class TicketCommentControllerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    void addCommentReturnsNotFoundForUnknownTicket() throws Exception {
+        when(ticketCommentService.addComment(eq(99L), any(CreateTicketCommentRequest.class)))
+                .thenThrow(new ResourceNotFoundException("Ticket with id 99 was not found"));
+
+        mockMvc.perform(post("/api/v1/tickets/99/comments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "authorId": 2,
+                                  "content": "I am investigating this issue."
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Ticket with id 99 was not found"))
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 
     private TicketCommentResponse commentResponse() {

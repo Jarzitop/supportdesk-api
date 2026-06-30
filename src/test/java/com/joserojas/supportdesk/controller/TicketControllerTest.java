@@ -27,6 +27,7 @@ import com.joserojas.supportdesk.dto.response.TicketResponse;
 import com.joserojas.supportdesk.enums.Priority;
 import com.joserojas.supportdesk.enums.TicketStatus;
 import com.joserojas.supportdesk.exception.InvalidTicketOperationException;
+import com.joserojas.supportdesk.exception.ResourceNotFoundException;
 import com.joserojas.supportdesk.service.TicketService;
 
 @WebMvcTest(TicketController.class)
@@ -88,6 +89,41 @@ class TicketControllerTest {
     }
 
     @Test
+    void getTicketByIdReturnsNotFoundForUnknownTicket() throws Exception {
+        when(ticketService.getTicketById(99L))
+                .thenThrow(new ResourceNotFoundException("Ticket with id 99 was not found"));
+
+        mockMvc.perform(get("/api/v1/tickets/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Ticket with id 99 was not found"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void createTicketReturnsNotFoundForUnknownRequester() throws Exception {
+        when(ticketService.createTicket(any(CreateTicketRequest.class)))
+                .thenThrow(new ResourceNotFoundException("User with id 99 was not found"));
+
+        mockMvc.perform(post("/api/v1/tickets")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Cannot sign in",
+                                  "description": "The login page rejects valid credentials",
+                                  "priority": "HIGH",
+                                  "requesterId": 99
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("User with id 99 was not found"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
     void createTicketReturnsBadRequestForInvalidRequest() throws Exception {
         mockMvc.perform(post("/api/v1/tickets")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -103,6 +139,24 @@ class TicketControllerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void createTicketReturnsBadRequestWhenRequesterIdIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/tickets")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Cannot sign in",
+                                  "description": "The login page rejects valid credentials",
+                                  "priority": "HIGH"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("requesterId: Requester id is required"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
@@ -173,6 +227,25 @@ class TicketControllerTest {
     }
 
     @Test
+    void assignTicketReturnsNotFoundForUnknownAgent() throws Exception {
+        when(ticketService.assignTicket(eq(10L), any(AssignTicketRequest.class)))
+                .thenThrow(new ResourceNotFoundException("User with id 99 was not found"));
+
+        mockMvc.perform(patch("/api/v1/tickets/10/assign")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "assignedAgentId": 99
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("User with id 99 was not found"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
     void updateTicketStatusReturnsUpdatedTicket() throws Exception {
         TicketResponse updatedTicket = ticketWithStatus(TicketStatus.IN_PROGRESS);
         when(ticketService.updateTicketStatus(eq(10L), any(UpdateTicketStatusRequest.class)))
@@ -205,6 +278,27 @@ class TicketControllerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.message").value("status: Status is required"));
+    }
+
+    @Test
+    void updateTicketStatusReturnsBadRequestForInvalidTransition() throws Exception {
+        when(ticketService.updateTicketStatus(eq(10L), any(UpdateTicketStatusRequest.class)))
+                .thenThrow(new InvalidTicketOperationException(
+                        "Cannot change ticket status from OPEN to CLOSED"));
+
+        mockMvc.perform(patch("/api/v1/tickets/10/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "CLOSED"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message")
+                        .value("Cannot change ticket status from OPEN to CLOSED"))
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 
     private TicketResponse ticketResponse() {
