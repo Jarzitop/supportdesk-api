@@ -95,14 +95,50 @@ class TicketServiceTest {
     }
 
     @Test
+    void listsAllTicketsInRepositoryOrder() {
+        when(ticketRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of());
+
+        List<TicketResponse> responses = ticketService.getAllTickets(null, null);
+
+        assertEquals(List.of(), responses);
+        verify(ticketRepository).findAllByOrderByCreatedAtDescIdDesc();
+    }
+
+    @Test
+    void filtersTicketsByStatus() {
+        when(ticketRepository.findByStatusOrderByCreatedAtDescIdDesc(TicketStatus.OPEN))
+                .thenReturn(List.of());
+
+        List<TicketResponse> responses = ticketService.getAllTickets(TicketStatus.OPEN, null);
+
+        assertEquals(List.of(), responses);
+        verify(ticketRepository).findByStatusOrderByCreatedAtDescIdDesc(TicketStatus.OPEN);
+    }
+
+    @Test
+    void filtersTicketsByPriority() {
+        when(ticketRepository.findByPriorityOrderByCreatedAtDescIdDesc(Priority.CRITICAL))
+                .thenReturn(List.of());
+
+        List<TicketResponse> responses = ticketService.getAllTickets(null, Priority.CRITICAL);
+
+        assertEquals(List.of(), responses);
+        verify(ticketRepository).findByPriorityOrderByCreatedAtDescIdDesc(Priority.CRITICAL);
+    }
+
+    @Test
     void filtersTicketsByStatusAndPriorityTogether() {
-        when(ticketRepository.findByStatusAndPriority(TicketStatus.OPEN, Priority.CRITICAL))
+        when(ticketRepository.findByStatusAndPriorityOrderByCreatedAtDescIdDesc(
+                TicketStatus.OPEN,
+                Priority.CRITICAL))
                 .thenReturn(List.of());
 
         List<TicketResponse> responses = ticketService.getAllTickets(TicketStatus.OPEN, Priority.CRITICAL);
 
         assertEquals(List.of(), responses);
-        verify(ticketRepository).findByStatusAndPriority(TicketStatus.OPEN, Priority.CRITICAL);
+        verify(ticketRepository).findByStatusAndPriorityOrderByCreatedAtDescIdDesc(
+                TicketStatus.OPEN,
+                Priority.CRITICAL);
     }
 
     @Test

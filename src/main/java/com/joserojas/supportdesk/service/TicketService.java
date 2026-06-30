@@ -58,13 +58,13 @@ public class TicketService {
         List<Ticket> tickets;
 
         if (status != null && priority != null) {
-            tickets = ticketRepository.findByStatusAndPriority(status, priority);
+            tickets = ticketRepository.findByStatusAndPriorityOrderByCreatedAtDescIdDesc(status, priority);
         } else if (status != null) {
-            tickets = ticketRepository.findByStatus(status);
+            tickets = ticketRepository.findByStatusOrderByCreatedAtDescIdDesc(status);
         } else if (priority != null) {
-            tickets = ticketRepository.findByPriority(priority);
+            tickets = ticketRepository.findByPriorityOrderByCreatedAtDescIdDesc(priority);
         } else {
-            tickets = ticketRepository.findAll();
+            tickets = ticketRepository.findAllByOrderByCreatedAtDescIdDesc();
         }
 
         return tickets.stream()
