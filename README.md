@@ -1,108 +1,210 @@
 # supportdesk-api
 
-Backend REST API for managing technical support tickets, users, agents, comments, basic SLA rules, and ticket change history.
+`supportdesk-api` is a backend-only REST API for managing users and technical support tickets. It is a Java 21 and Spring Boot portfolio project that demonstrates a simple layered architecture, request validation, persistence, error handling, ticket workflows, and automated testing.
 
-This project is part of my backend development portfolio as a Systems and Computing Engineering student. The goal is to build a clean, professional API using Java and Spring Boot.
+The project is an MVP intended for learning and portfolio use. It is not presented as production-ready and currently has no frontend or authentication.
 
-## Project Scope
+## Implemented Features
 
-`supportdesk-api` is a backend-only application. It does not include a frontend, authentication system, cloud deployment, or microservices in the initial MVP.
+### User management
 
-The API allows users to create and manage support tickets, assign tickets to support agents, update ticket status, add comments, calculate basic SLA deadlines, and store important ticket changes in a history table.
+* Create a user
+* List all users
+* Get a user by ID
+
+### Ticket management
+
+* Create and retrieve tickets
+* Filter tickets by status and priority
+* Assign tickets to support agents
+* Update ticket status
+* Add and list ticket comments
+* View ticket change history
+* Calculate a basic SLA deadline from ticket priority
+
+### API and persistence
+
+* Request validation with meaningful validation errors
+* Global handling for common API errors
+* PostgreSQL persistence through Spring Data JPA
+* Docker Compose configuration for a local PostgreSQL database
+* Service, controller, request validation, and utility tests
 
 ## Tech Stack
 
 * Java 21
 * Spring Boot
-* Spring Web
+* Spring WebMVC
 * Spring Data JPA
 * Spring Validation
 * PostgreSQL
+* Maven with Maven Wrapper
+* JUnit, MockMvc, and Mockito
 * Docker Compose
-* Swagger / OpenAPI
-* JUnit
-* Postman
-* GitHub Actions later
 
-## Main Domain Concepts
+## Architecture
 
-* Users
-* Tickets
-* Comments
-* Ticket history
-* Roles
-* Ticket statuses
-* Priorities
-* Basic SLA calculation
-
-## MVP Features
-
-* Create users
-* List users
-* Get user by id
-* Create tickets
-* List tickets
-* Get ticket by id
-* Filter tickets by status and priority
-* Assign ticket to support agent
-* Change ticket status
-* Add comments to tickets
-* Store ticket change history
-* Calculate basic SLA deadline based on priority
-* Validate input data
-* Handle errors with a global exception handler
-* Document endpoints with Swagger/OpenAPI
-* Run the database with Docker Compose
-* Add basic automated tests
-
-## Out of Scope for the MVP
-
-* Frontend
-* Authentication and authorization
-* JWT
-* Email notifications
-* WebSockets
-* Microservices
-* AWS or cloud deployment
-* Kubernetes
-* Advanced reporting
-
-## Initial Architecture
-
-The project follows a simple layered backend architecture:
+The API uses a straightforward layered architecture:
 
 ```text
 Controller -> Service -> Repository -> Database
 ```
 
-DTOs are used to avoid exposing JPA entities directly through the API.
+Request and response DTOs keep the HTTP contract separate from the JPA entities. Business rules are handled in the service layer.
 
-Business logic belongs in the service layer.
+## Getting Started
 
-Repositories should only handle database access.
+### Prerequisites
 
-Controllers should stay thin and only handle HTTP-level concerns.
+* Java 21
+* PostgreSQL installed locally, or Docker with Docker Compose
+* No system-wide Maven installation is required; the repository includes the Maven Wrapper
 
-## Database
+### Database
 
-The initial database will be PostgreSQL and will run locally through Docker Compose.
-
-## API Documentation
-
-Swagger/OpenAPI will be available once the Spring Boot application is implemented.
-
-Expected local URL:
+The default application configuration connects to PostgreSQL on `localhost:5432` using:
 
 ```text
-http://localhost:8080/swagger-ui/index.html
+Database: supportdesk_db
+Username: supportdesk_user
+Password: supportdesk_pass
 ```
 
-## Status
+Start the configured PostgreSQL container from the repository root:
 
-Current phase: Phase 0 — project definition and repository setup.
+```powershell
+docker compose up -d
+```
+
+Alternatively, create a local PostgreSQL database and user with the same values. Stop the Docker Compose services with:
+
+```powershell
+docker compose down
+```
+
+### Run the Application
+
+On Windows, start the application with the Maven Wrapper:
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+The API is then available at:
+
+```text
+http://localhost:8080
+```
+
+### Run the Tests
+
+```powershell
+.\mvnw.cmd test
+```
+
+## API Endpoints
+
+All endpoints use the base URL `http://localhost:8080`.
+
+### Users
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/v1/users` | Create a user |
+| `GET` | `/api/v1/users` | List all users |
+| `GET` | `/api/v1/users/{id}` | Get a user by ID |
+
+### Tickets
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/v1/tickets` | Create a ticket |
+| `GET` | `/api/v1/tickets` | List all tickets |
+| `GET` | `/api/v1/tickets/{id}` | Get a ticket by ID |
+| `GET` | `/api/v1/tickets?status=OPEN` | Filter tickets by status |
+| `GET` | `/api/v1/tickets?priority=HIGH` | Filter tickets by priority |
+| `GET` | `/api/v1/tickets?status=OPEN&priority=HIGH` | Filter tickets by status and priority |
+| `PATCH` | `/api/v1/tickets/{id}/assign` | Assign a ticket to a support agent |
+| `PATCH` | `/api/v1/tickets/{id}/status` | Update a ticket's status |
+| `POST` | `/api/v1/tickets/{ticketId}/comments` | Add a comment to a ticket |
+| `GET` | `/api/v1/tickets/{ticketId}/comments` | List a ticket's comments |
+| `GET` | `/api/v1/tickets/{ticketId}/history` | View a ticket's change history |
+
+Supported enum values:
+
+* Roles: `ADMIN`, `SUPPORT_AGENT`, `REQUESTER`
+* Priorities: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
+* Ticket statuses: `OPEN`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`
+
+## Example Requests
+
+### Create a User
+
+`POST /api/v1/users`
+
+```json
+{
+  "fullName": "Ana Torres",
+  "email": "ana.torres@example.com",
+  "role": "REQUESTER"
+}
+```
+
+### Create a Ticket
+
+`POST /api/v1/tickets`
+
+```json
+{
+  "title": "Cannot connect to VPN",
+  "description": "The VPN client reports a connection timeout.",
+  "priority": "HIGH",
+  "requesterId": 1
+}
+```
+
+### Assign a Ticket
+
+`PATCH /api/v1/tickets/1/assign`
+
+```json
+{
+  "assignedAgentId": 2
+}
+```
+
+The selected user must have the `SUPPORT_AGENT` role.
+
+### Update Ticket Status
+
+`PATCH /api/v1/tickets/1/status`
+
+```json
+{
+  "status": "IN_PROGRESS"
+}
+```
+
+### Add a Comment
+
+`POST /api/v1/tickets/1/comments`
+
+```json
+{
+  "authorId": 2,
+  "content": "Investigating the VPN gateway logs."
+}
+```
+
+## Roadmap
+
+* OpenAPI/Swagger documentation
+* Pagination and sorting
+* Spring Security and JWT authentication
+* Continuous integration with GitHub Actions
+* Test database isolation
+* Deployment-specific configuration profile
 
 ## Author
 
-Jose Rojas
-Systems and Computing Engineering student
-Universidad de Los Andes
+Jose Rojas, Systems and Computing Engineering student at Universidad de Los Andes.
