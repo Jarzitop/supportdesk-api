@@ -18,6 +18,8 @@ import com.joserojas.supportdesk.service.TicketCommentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api/v1/tickets/{ticketId}/comments")
@@ -43,8 +45,8 @@ public class TicketCommentController {
     @Operation(summary = "List a ticket's comments")
     public ResponseEntity<PageResponse<TicketCommentResponse>> getCommentsByTicketId(
             @PathVariable Long ticketId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return ResponseEntity.ok(ticketCommentService.getCommentsByTicketId(ticketId, page, size));
     }
 }

@@ -23,6 +23,8 @@ import com.joserojas.supportdesk.service.TicketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api/v1/tickets")
@@ -45,8 +47,8 @@ public class TicketController {
     @GetMapping
     @Operation(summary = "List and filter tickets")
     public ResponseEntity<PageResponse<TicketResponse>> getAllTickets(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
             @RequestParam(required = false) TicketStatus status,
             @RequestParam(required = false) Priority priority) {
         return ResponseEntity.ok(ticketService.getAllTickets(page, size, status, priority));

@@ -47,6 +47,20 @@ class TicketHistoryControllerTest {
     }
 
     @Test
+    void getHistoryRejectsNegativePage() throws Exception {
+        mockMvc.perform(get("/api/v1/tickets/10/history").param("page", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void getHistoryRejectsZeroSize() throws Exception {
+        mockMvc.perform(get("/api/v1/tickets/10/history").param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
     void getHistoryReturnsNotFoundWhenTicketDoesNotExist() throws Exception {
         when(ticketHistoryService.getHistoryByTicketId(99L, 0, 20))
                 .thenThrow(new ResourceNotFoundException("Ticket with id 99 was not found"));

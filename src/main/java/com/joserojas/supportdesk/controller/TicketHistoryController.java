@@ -13,6 +13,8 @@ import com.joserojas.supportdesk.service.TicketHistoryService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api/v1/tickets/{ticketId}/history")
@@ -29,8 +31,8 @@ public class TicketHistoryController {
     @Operation(summary = "View a ticket's change history")
     public ResponseEntity<PageResponse<TicketHistoryResponse>> getHistoryByTicketId(
             @PathVariable Long ticketId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return ResponseEntity.ok(ticketHistoryService.getHistoryByTicketId(ticketId, page, size));
     }
 }

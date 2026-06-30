@@ -216,7 +216,7 @@ curl -X POST http://localhost:8080/api/v1/tickets \
 
 ### List tickets
 
-The endpoint returns a paginated response. `page` is zero-based and defaults to `0`; `size` defaults to `20`.
+The endpoint returns a paginated response. `page` is zero-based, has a minimum of `0`, and defaults to `0`; `size` must be between `1` and `100` and defaults to `20`.
 
 ```bash
 curl "http://localhost:8080/api/v1/tickets?page=0&size=20"
@@ -285,7 +285,7 @@ curl -X POST http://localhost:8080/api/v1/tickets/1/comments \
 
 ### List comments
 
-The response uses the same paginated structure as ticket listings. `page` is zero-based and defaults to `0`; `size` defaults to `20`.
+The response uses the same paginated structure as ticket listings. `page` has a minimum of `0`; `size` must be between `1` and `100`. Their defaults are `0` and `20`, respectively.
 
 ```bash
 curl "http://localhost:8080/api/v1/tickets/1/comments?page=0&size=20"
@@ -293,7 +293,7 @@ curl "http://localhost:8080/api/v1/tickets/1/comments?page=0&size=20"
 
 ### View ticket history
 
-History responses are also paginated with default values `page=0` and `size=20`.
+History responses use the same limits: `page` has a minimum of `0`, and `size` must be between `1` and `100`. Defaults are `page=0` and `size=20`.
 
 ```bash
 curl "http://localhost:8080/api/v1/tickets/1/history?page=0&size=20"

@@ -93,6 +93,29 @@ class TicketControllerTest {
     }
 
     @Test
+    void getAllTicketsRejectsNegativePage() throws Exception {
+        mockMvc.perform(get("/api/v1/tickets").param("page", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Request parameter validation failed"));
+    }
+
+    @Test
+    void getAllTicketsRejectsZeroSize() throws Exception {
+        mockMvc.perform(get("/api/v1/tickets").param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void getAllTicketsRejectsSizeAboveMaximum() throws Exception {
+        mockMvc.perform(get("/api/v1/tickets").param("size", "101"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
     void getAllTicketsFiltersByStatus() throws Exception {
         when(ticketService.getAllTickets(0, 20, TicketStatus.OPEN, null)).thenReturn(pageResponse());
 

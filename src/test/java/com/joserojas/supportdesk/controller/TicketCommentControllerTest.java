@@ -73,6 +73,20 @@ class TicketCommentControllerTest {
     }
 
     @Test
+    void getCommentsRejectsNegativePage() throws Exception {
+        mockMvc.perform(get("/api/v1/tickets/10/comments").param("page", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void getCommentsRejectsZeroSize() throws Exception {
+        mockMvc.perform(get("/api/v1/tickets/10/comments").param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
     void getCommentsReturnsNotFoundWhenTicketDoesNotExist() throws Exception {
         when(ticketCommentService.getCommentsByTicketId(99L, 0, 20))
                 .thenThrow(new ResourceNotFoundException("Ticket with id 99 was not found"));
